@@ -204,11 +204,18 @@ const api = {
     },
 
     // Login
-    login: async (email, password) => {
+    login: async (identifier, password, isPhone = false) => {
+        const body = { password };
+        if (isPhone) {
+            body.phoneNumber = identifier;
+        } else {
+            body.email = identifier;
+        }
+
         const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify(body)
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
@@ -237,6 +244,22 @@ const api = {
             success: true,
             data: { user: currentUser }
         };
+    },
+
+    // Update Profile
+    updateProfile: async (profileData) => {
+        const token = tokenManager.getAccessToken();
+        const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(profileData)
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        return data;
     },
 
     // Change Password
@@ -337,111 +360,41 @@ const api = {
 
     // Create record
     createRecord: async (recordData) => {
-        await delay();
-
-        /* REAL API CALL:
         const token = tokenManager.getAccessToken();
         const response = await fetch(`${API_BASE_URL}/api/records/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(recordData)
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(recordData)
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         return data;
-        */
-
-        const newRecord = {
-            _id: 'record_' + generateId(),
-            ...recordData,
-            files: [],
-            sharedWith: [],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-
-        DUMMY_RECORDS.push(newRecord);
-
-        return {
-            success: true,
-            message: 'Record created successfully',
-            data: { record: newRecord }
-        };
     },
 
     // Get patient records
     getPatientRecords: async (patientId, params = {}) => {
-        await delay();
-
-        /* REAL API CALL:
         const token = tokenManager.getAccessToken();
         const queryParams = new URLSearchParams(params);
         const response = await fetch(`${API_BASE_URL}/api/records/${patientId}?${queryParams}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+            headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         return data;
-        */
-
-        const patientRecords = DUMMY_RECORDS.filter(r => r.patientId === patientId);
-        const skip = parseInt(params.skip) || 0;
-        const limit = parseInt(params.limit) || 10;
-        const paginatedRecords = patientRecords.slice(skip, skip + limit);
-
-        // Populate creator and patient info
-        const populatedRecords = paginatedRecords.map(record => ({
-            ...record,
-            patient: DUMMY_USERS.find(u => u._id === record.patientId),
-            creator: DUMMY_USERS.find(u => u._id === record.createdBy)
-        }));
-
-        return {
-            success: true,
-            data: {
-                records: populatedRecords,
-                pagination: {
-                    total: patientRecords.length,
-                    skip,
-                    limit,
-                    hasMore: skip + limit < patientRecords.length
-                }
-            }
-        };
     },
 
     // Get single record
     getRecord: async (recordId) => {
-        await delay();
-
-        /* REAL API CALL:
         const token = tokenManager.getAccessToken();
         const response = await fetch(`${API_BASE_URL}/api/records/view/${recordId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+            headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         return data;
-        */
-
-        const record = DUMMY_RECORDS.find(r => r._id === recordId);
-        if (!record) {
-            throw new Error('Record not found');
-        }
-
-        const populatedRecord = {
-            ...record,
-            patient: DUMMY_USERS.find(u => u._id === record.patientId),
-            creator: DUMMY_USERS.find(u => u._id === record.createdBy)
-        };
-
-        return {
-            success: true,
-            data: { record: populatedRecord }
-        };
     },
 
     // Update record
@@ -608,19 +561,45 @@ const api = {
         };
     },
 
+    // ============== USER MANAGEMENT (ADMIN) ==============
+
+    // Get all users (Admin only)
+    getAllUsers: async () => {
+        const token = tokenManager.getAccessToken();
+        const response = await fetch(`${API_BASE_URL}/api/auth/users`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        return data;
+    },
+
+    // Get records by creator (for doctor dashboard)
+    getRecordsByCreator: async (creatorId) => {
+        const token = tokenManager.getAccessToken();
+        const response = await fetch(`${API_BASE_URL}/api/records/my-records`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        return data;
+    },
+
     // ============== ACCESS REQUESTS ==============
 
     // Request access to patient's records (Doctor)
     requestAccess: async (patientEmail, message = '') => {
         const token = tokenManager.getAccessToken();
-        // First, find patient by email
-        const findResponse = await fetch(`${API_BASE_URL}/api/auth/users?email=${patientEmail}`, {
+        // Use verify-patient endpoint (doctors/lab assistants can verify patient emails)
+        const findResponse = await fetch(`${API_BASE_URL}/api/auth/verify-patient?email=${patientEmail}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const findData = await findResponse.json();
-        if (!findResponse.ok || !findData.data.users.length) throw new Error('Patient not found');
+        if (!findResponse.ok || !findData.data.user) {
+            throw new Error(findData.message || 'Patient not found');
+        }
 
-        const patientId = findData.data.users[0]._id;
+        const patientId = findData.data.user._id;
         const response = await fetch(`${API_BASE_URL}/api/access-requests/`, {
             method: 'POST',
             headers: {
@@ -646,6 +625,18 @@ const api = {
         return data;
     },
 
+    // Get granted access (Patient views who they gave access to)
+    getGrantedAccess: async (params = {}) => {
+        const token = tokenManager.getAccessToken();
+        const queryParams = new URLSearchParams(params);
+        const response = await fetch(`${API_BASE_URL}/api/access-requests/granted-access?${queryParams}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        return data;
+    },
+
     // Respond to access request (Patient approves/denies)
     respondToRequest: async (requestId, action) => {
         const token = tokenManager.getAccessToken();
@@ -662,46 +653,32 @@ const api = {
         return data;
     },
 
-    // Get my sent requests (Doctor)
-    getMyRequests: async (params = {}) => {
-        await delay();
-
-        /* REAL API CALL:
+    // Revoke access (Patient revokes granted access)
+    revokeAccess: async (requestId, timing = 'immediate') => {
         const token = tokenManager.getAccessToken();
-        const queryParams = new URLSearchParams(params);
-        const response = await fetch(`${API_BASE_URL}/api/access-requests/my-requests?${queryParams}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+        const response = await fetch(`${API_BASE_URL}/api/access-requests/${requestId}/revoke`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ timing })
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         return data;
-        */
+    },
 
-        const currentUser = storage.get('currentUser') || DUMMY_USERS[1]; // Default to doctor
-        const patient = DUMMY_USERS.find(u => u.role === USER_ROLES.PATIENT);
-
-        return {
-            success: true,
-            data: {
-                requests: [
-                    {
-                        _id: 'request_1',
-                        requesterId: currentUser._id,
-                        patientId: patient._id,
-                        message: 'Need access for medical consultation',
-                        status: 'pending',
-                        createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-                        patient
-                    }
-                ],
-                pagination: {
-                    total: 1,
-                    skip: 0,
-                    limit: 10,
-                    hasMore: false
-                }
-            }
-        };
+    // Get my sent requests (Doctor)
+    getMyRequests: async (params = {}) => {
+        const token = tokenManager.getAccessToken();
+        const queryParams = new URLSearchParams(params);
+        const response = await fetch(`${API_BASE_URL}/api/access-requests/my-requests?${queryParams}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        return data;
     },
 
     // ============== FILE UPLOAD/DOWNLOAD ==============
@@ -767,11 +744,60 @@ const api = {
         return data;
     },
 
+    // Generate share-all token
+    generateShareAllToken: async (duration = '24h') => {
+        const token = tokenManager.getAccessToken();
+        const response = await fetch(`${API_BASE_URL}/api/records/share-all`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ duration })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        return data;
+    },
+
+    // Get records by share token (public - no auth required)
+    getRecordsByShareToken: async (token) => {
+        const response = await fetch(`${API_BASE_URL}/api/records/shared/${token}`);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        return data;
+    },
+
     // ============== ADMIN ==============
 
     // Get all users (Admin only)
     getUsers: async (params = {}) => {
         const token = tokenManager.getAccessToken();
+
+        // Special case: If searching for a patient by email OR phone (for CreateRecord)
+        // use the verify-patient endpoint instead (accessible by doctors/lab assistants)
+        if (params.role === 'patient' && (params.email || params.phoneNumber)) {
+            const queryParams = new URLSearchParams();
+            if (params.email) queryParams.append('email', params.email);
+            if (params.phoneNumber) queryParams.append('phoneNumber', params.phoneNumber);
+
+            const response = await fetch(`${API_BASE_URL}/api/auth/verify-patient?${queryParams.toString()}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message);
+
+            // Return in same format as users endpoint
+            return {
+                success: true,
+                data: {
+                    users: data.data.user ? [data.data.user] : [],
+                    pagination: { total: data.data.user ? 1 : 0 }
+                }
+            };
+        }
+
+        // Admin-only: Get all users
         const queryParams = new URLSearchParams(params);
         const response = await fetch(`${API_BASE_URL}/api/auth/users?${queryParams}`, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -823,17 +849,6 @@ const api = {
                 'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify(recordData)
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
-        return data;
-    },
-
-    // Get single record
-    getRecord: async (recordId) => {
-        const token = tokenManager.getAccessToken();
-        const response = await fetch(`${API_BASE_URL}/api/records/${recordId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
