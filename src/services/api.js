@@ -873,6 +873,19 @@ const api = {
         return data;
     },
 
+    // ============== PATIENT SELF-UPLOAD ==============
+
+    // Check if patient can upload records (10-day window)
+    checkUploadEligibility: async () => {
+        const token = tokenManager.getAccessToken();
+        const response = await fetch(`${API_BASE_URL}/api/records/upload-eligibility`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        return data;
+    },
+
     // Create record (Doctor/Lab Assistant)
     createRecord: async (recordData) => {
         const token = tokenManager.getAccessToken();
@@ -883,6 +896,19 @@ const api = {
                 'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify(recordData)
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        return data;
+    },
+
+    // ============== ADMIN FUNCTIONS ==============
+
+    // Get patients eligible for self-upload (10-day window)
+    getEligibleUploaders: async () => {
+        const token = tokenManager.getAccessToken();
+        const response = await fetch(`${API_BASE_URL}/api/auth/users/eligible-uploaders`, {
+            headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
