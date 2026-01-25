@@ -132,6 +132,11 @@ const UploadRecords = () => {
 
                 } catch (error) {
                     console.error(`Failed to upload ${fileItem.file.name}:`, error);
+
+                    // Set error message with details if available
+                    const errorMsg = error.message || 'Upload failed';
+                    setError(errorMsg + (error.hint ? ` Hint: ${error.hint}` : ''));
+
                     setFiles(prev => prev.map(f =>
                         f.id === fileItem.id ? { ...f, status: 'error' } : f
                     ));
