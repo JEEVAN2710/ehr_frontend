@@ -93,8 +93,7 @@ const UploadRecords = () => {
                     // Step 1: Get presigned URL
                     const presignedRes = await api.getPresignedUploadUrl({
                         filename: fileItem.file.name,
-                        contentType: fileItem.file.type,
-                        patientId: user._id
+                        contentType: fileItem.file.type
                     });
 
                     const { uploadUrl, key } = presignedRes.data;
