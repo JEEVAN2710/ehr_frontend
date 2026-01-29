@@ -111,18 +111,20 @@ const UploadRecords = () => {
                         throw new Error('Upload failed');
                     }
 
-                    // Step 3: Create record in database
-                    await api.createRecord({
+                    // Step 3: Create record in database (without files)
+                    const recordResponse = await api.createRecord({
                         patientId: user._id,
                         title: fileItem.file.name.replace(/\.[^/.]+$/, ''), // Remove extension
                         description: `Self-uploaded medical record`,
-                        recordType: 'other',
-                        files: [{
-                            key,
-                            originalName: fileItem.file.name,
-                            contentType: fileItem.file.type,
-                            size: fileItem.file.size
-                        }]
+                        recordType: 'other'
+                    });
+
+                    // Step 4: Add file to the record
+                    await api.addFileToRecord(recordResponse.data._id, {
+                        fileKey: key,
+                        filename: fileItem.file.name,
+                        contentType: fileItem.file.type,
+                        size: fileItem.file.size
                     });
 
                     // Mark as success
