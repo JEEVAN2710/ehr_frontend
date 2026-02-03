@@ -103,6 +103,15 @@ const CreateRecord = () => {
 
     const handleFileUpload = async (file, onProgress) => {
         try {
+            // Check for duplicate files
+            const isDuplicate = uploadedFiles.some(
+                existingFile => existingFile.filename === file.name
+            );
+
+            if (isDuplicate) {
+                throw new Error(`File "${file.name}" has already been uploaded. Please choose a different file.`);
+            }
+
             // Step 1: Get presigned upload URL
             onProgress(20);
             const uploadResponse = await api.getPresignedUploadUrl({
