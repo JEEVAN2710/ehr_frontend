@@ -6,7 +6,7 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import LoadingSpinner from '../components/LoadingSpinner';
 import BlockchainAudit from '../components/BlockchainAudit';
-import { ArrowLeft, Download, FileText, Calendar, User, AlertCircle, Shield, Info, Trash2 } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Calendar, User, AlertCircle, Shield, Info } from 'lucide-react';
 import './ViewRecord.css';
 
 const ViewRecord = () => {
@@ -77,24 +77,6 @@ const ViewRecord = () => {
         }
     };
 
-    const handleDeleteRecord = async () => {
-        if (!window.confirm('Are you sure you want to delete this record? This action cannot be undone.')) {
-            return;
-        }
-
-        try {
-            setLoading(true);
-            await api.deleteRecord(id);
-            alert('Record deleted successfully');
-            navigate('/dashboard');
-        } catch (err) {
-            console.error('Delete error:', err);
-            alert(err.message || 'Failed to delete record');
-        } finally {
-            setLoading(false);
-        }
-    };
-
     if (loading) {
         return (
             <div className="view-record-loading">
@@ -133,14 +115,6 @@ const ViewRecord = () => {
                     onClick={() => navigate('/dashboard')}
                 >
                     Back to Dashboard
-                </Button>
-                <Button
-                    variant="danger"
-                    icon={<Trash2 size={20} />}
-                    onClick={handleDeleteRecord}
-                    disabled={loading}
-                >
-                    Delete Record
                 </Button>
             </div>
 
