@@ -1,4 +1,3 @@
-```
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -55,7 +54,7 @@ const ViewRecord = () => {
                     const result = await api.checkFileExists(file.key);
                     existenceMap[file.key] = result.exists;
                 } catch (err) {
-                    console.error(`Failed to check existence for ${ file.key }: `, err);
+                    console.error(`Failed to check existence for ${file.key}: `, err);
                     // Assume file exists if check fails (to avoid false warnings)
                     existenceMap[file.key] = true;
                 }
@@ -149,14 +148,14 @@ const ViewRecord = () => {
                 {/* Tab Navigation */}
                 <div className="record-tabs">
                     <button
-                        className={`tab - button ${ activeTab === 'details' ? 'active' : '' } `}
+                        className={`tab - button ${activeTab === 'details' ? 'active' : ''} `}
                         onClick={() => setActiveTab('details')}
                     >
                         <Info size={18} />
                         Details
                     </button>
                     <button
-                        className={`tab - button ${ activeTab === 'blockchain' ? 'active' : '' } `}
+                        className={`tab - button ${activeTab === 'blockchain' ? 'active' : ''} `}
                         onClick={() => setActiveTab('blockchain')}
                     >
                         <Shield size={18} />
@@ -227,7 +226,7 @@ const ViewRecord = () => {
                                         const isChecking = checkingFiles && fileExistence[file.key] === undefined;
 
                                         return (
-                                            <div key={index} className={`file - item ${ !fileExists ? 'file-missing' : '' } `}>
+                                            <div key={index} className={`file - item ${!fileExists ? 'file-missing' : ''} `}>
                                                 <div className="file-info">
                                                     <FileText size={24} className="file-icon" />
                                                     <div>
