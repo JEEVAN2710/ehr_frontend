@@ -1,3 +1,4 @@
+```
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -6,7 +7,7 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import LoadingSpinner from '../components/LoadingSpinner';
 import BlockchainAudit from '../components/BlockchainAudit';
-import { ArrowLeft, Download, FileText, Calendar, User, AlertCircle, Shield, Info } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Calendar, User, AlertCircle, Shield, Info, Trash2 } from 'lucide-react';
 import './ViewRecord.css';
 
 const ViewRecord = () => {
@@ -54,7 +55,7 @@ const ViewRecord = () => {
                     const result = await api.checkFileExists(file.key);
                     existenceMap[file.key] = result.exists;
                 } catch (err) {
-                    console.error(`Failed to check existence for ${file.key}:`, err);
+                    console.error(`Failed to check existence for ${ file.key }: `, err);
                     // Assume file exists if check fails (to avoid false warnings)
                     existenceMap[file.key] = true;
                 }
@@ -73,7 +74,25 @@ const ViewRecord = () => {
             const response = await api.getPresignedDownloadUrl(file.key, id);
             window.open(response.data.downloadUrl, '_blank');
         } catch (err) {
-            alert('Failed to download file: ' + err.message);
+            console.error('Download error:', err);
+        }
+    };
+
+    const handleDeleteRecord = async () => {
+        if (!window.confirm('Are you sure you want to delete this record? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await api.deleteRecord(id);
+            alert('Record deleted successfully');
+            navigate('/dashboard');
+        } catch (err) {
+            console.error('Delete error:', err);
+            alert(err.message || 'Failed to delete record');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -116,20 +135,28 @@ const ViewRecord = () => {
                 >
                     Back to Dashboard
                 </Button>
+                <Button
+                    variant="danger"
+                    icon={<Trash2 size={20} />}
+                    onClick={handleDeleteRecord}
+                    disabled={loading}
+                >
+                    Delete Record
+                </Button>
             </div>
 
             <Card glass>
                 {/* Tab Navigation */}
                 <div className="record-tabs">
                     <button
-                        className={`tab-button ${activeTab === 'details' ? 'active' : ''}`}
+                        className={`tab - button ${ activeTab === 'details' ? 'active' : '' } `}
                         onClick={() => setActiveTab('details')}
                     >
                         <Info size={18} />
                         Details
                     </button>
                     <button
-                        className={`tab-button ${activeTab === 'blockchain' ? 'active' : ''}`}
+                        className={`tab - button ${ activeTab === 'blockchain' ? 'active' : '' } `}
                         onClick={() => setActiveTab('blockchain')}
                     >
                         <Shield size={18} />
@@ -200,7 +227,7 @@ const ViewRecord = () => {
                                         const isChecking = checkingFiles && fileExistence[file.key] === undefined;
 
                                         return (
-                                            <div key={index} className={`file-item ${!fileExists ? 'file-missing' : ''}`}>
+                                            <div key={index} className={`file - item ${ !fileExists ? 'file-missing' : '' } `}>
                                                 <div className="file-info">
                                                     <FileText size={24} className="file-icon" />
                                                     <div>
